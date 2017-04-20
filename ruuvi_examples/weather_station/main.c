@@ -82,7 +82,7 @@ APP_TIMER_DEF(main_timer_id);                                             /** Cr
 
 //milliseconds until main loop timer function is called. Other timers can bring
 //application out of sleep at higher (or lower) interval
-#define MAIN_LOOP_INTERVAL 5000u 
+#define MAIN_LOOP_INTERVAL 5000u
 #define MAIN_BACK_TO_SLEEP_TIME 60000u //after 1 minute application enters deep sleep if user button has not been pressed.
 
 //Flag to enter system off if application is not started
@@ -103,17 +103,17 @@ static void power_manage(void)
 {
     if(1 == nrf_gpio_pin_read(BUTTON_1)) //leave led on button press
     {
-        nrf_gpio_pin_set(LED_GREEN); 
+        nrf_gpio_pin_set(LED_GREEN);
     }
     /* Clear exceptions and PendingIRQ from the FPU unit */
-    //__set_FPSCR(__get_FPSCR()  & ~(FPU_EXCEPTION_MASK));      
+    //__set_FPSCR(__get_FPSCR()  & ~(FPU_EXCEPTION_MASK));
     //(void) __get_FPSCR();
     //NVIC_ClearPendingIRQ(FPU_IRQn);
     uint32_t err_code = sd_app_evt_wait();
     APP_ERROR_CHECK(err_code);
     if(application_started)
     {
-        nrf_gpio_pin_clear(LED_GREEN); 
+        nrf_gpio_pin_clear(LED_GREEN);
     }
 }
 
@@ -126,7 +126,7 @@ static void main_timer_handler(void * p_context)
         counter++;
     }
 
-    if((MAIN_BACK_TO_SLEEP_TIME / MAIN_LOOP_INTERVAL) <= counter) 
+    if((MAIN_BACK_TO_SLEEP_TIME / MAIN_LOOP_INTERVAL) <= counter)
     {
         sd_power_system_off(); // Program is reset upon leaving OFF.
     }
@@ -134,7 +134,7 @@ static void main_timer_handler(void * p_context)
 }
 
 // Sensor values
-typedef struct 
+typedef struct
 {
 uint8_t     format;         // does not include time
 uint8_t     humidity;       // one lsb is 0.5%
@@ -153,7 +153,7 @@ static void readData(void)
     int32_t raw_t = bme280_get_temperature();
     uint32_t raw_p = bme280_get_pressure();
     uint32_t raw_h = bme280_get_humidity();
-   
+
     NRF_LOG_DEBUG("temperature: %d, pressure: %d, humidity: %d", raw_t, raw_p, raw_h);
 
     /*
@@ -163,15 +163,14 @@ static void readData(void)
     4-5: uint16_t    pressure;        // (-50kPa)
     */
     //Convert raw values to ruu.vi specification
-    //Round values: 1 deg C, 1 hPa, 1% RH 
+    //Round values: 1 deg C, 1 hPa, 1% RH
     sensor_values.format = WEATHER_STATION_URL_FORMAT;
     sensor_values.temperature = (raw_t < 0) ? 0x8000 : 0x0000; //Sign bit
     if(raw_t < 0) raw_t = 0-raw_t; // disrecard sign
     sensor_values.temperature |= (((raw_t * 256) / 100) & 0x7F00);//8:8 signed fixed point, Drop decimals
     sensor_values.pressure = (uint16_t)((raw_p >> 8) - 50000); //Scale into pa, Shift by -50000 pa as per Ruu.vi interface.
     sensor_values.pressure -= sensor_values.pressure % 100; //Drop decimals
-    sensor_values.humidity = (uint8_t)(raw_h >> 11); 
-    sensor_values.humidity <<= 2; //sensor_values.humidity = (uint8_t)((raw_h/1024) * 2);
+    sensor_values.humidity = (uint8_t)(raw_h >> 9);
 
     //serialize values into a string
     char pack[6] = {0};
@@ -181,20 +180,20 @@ static void readData(void)
     pack[3] = (sensor_values.temperature)&0xFF;
     pack[4] = (sensor_values.pressure)>>8;
     pack[5] = (sensor_values.pressure)&0xFF;
-     
+
     /// We've got 18-8=10 characters available. Encoding 48 bits using Base64 produces max 8 chars.
-    memset(&buffer_base64_out, 0, sizeof(buffer_base64_out)); 
+    memset(&buffer_base64_out, 0, sizeof(buffer_base64_out));
     base64encode(pack, sizeof(pack), buffer_base64_out, ENCODED_DATA_LENGTH);
 
     // Fill the URL buffer. Eddystone config contains frame type, RSSI and URL scheme.
-    url_buffer[0] = 0x72; // r
-    url_buffer[1] = 0x75; // u
-    url_buffer[2] = 0x75; // u
-    url_buffer[3] = 0x2E; // .
-    url_buffer[4] = 0x76; // v
-    url_buffer[5] = 0x69; // i
-    url_buffer[6] = 0x2F; // /
-    url_buffer[7] = 0x23; // #      
+    url_buffer[0] = 'r';
+    url_buffer[1] = 'u';
+    url_buffer[2] = 'u';
+    url_buffer[3] = '.';
+    url_buffer[4] = 'v';
+    url_buffer[5] = 'i';
+    url_buffer[6] = '/';
+    url_buffer[7] = '#';
     memcpy(&url_buffer[EDDYSTONE_URL_BASE_LENGTH], &buffer_base64_out, ENCODED_DATA_LENGTH);
 }
 
@@ -257,7 +256,7 @@ int main(void)
     //    power_manage();
     //}//user pressed button, start.
     application_started = true; //set flag
-	
+
     //Lis2dh12RetVal = LIS2DH12_init(LIS2DH12_POWER_LOW, LIS2DH12_SCALE2G, NULL);//start accelerometer // not needed in weather station
 
     //setup BME280
@@ -272,12 +271,12 @@ int main(void)
     startRead = true;
     //Turn green led on to signal application start
     //LED will be turned off in power_manage
-    nrf_gpio_pin_clear(LED_GREEN); 
+    nrf_gpio_pin_clear(LED_GREEN);
 
     // Enter main loop.
     for (;; )
     {
-         //NRF_LOG_DEBUG("Loopin'\r\n");  
+         //NRF_LOG_DEBUG("Loopin'\r\n");
          if(startRead)
          {
              startRead = false;
